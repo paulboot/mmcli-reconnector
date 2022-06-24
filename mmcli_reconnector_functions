@@ -1,5 +1,3 @@
-#!/bin/bash
-
 ## mmcli-cl functions
 ## -- for my Sierra Netgear AirCard 320U Modem DirectIP-manual connection
 ##
@@ -40,6 +38,16 @@ function debug()
 function repdot()
 {
     return ${1//[\.]/,}
+}
+
+function getiinitbearer()
+{
+    iinitbearer=$(mmcli -J -m $imodem | jq -r '.modem."3gpp".eps."initial-bearer"."dbus-path"' | cut -d/ -f6 | awk '{print $1}')
+}
+
+function getibearer()
+{
+    ibearer=$(mmcli -J -m $imodem | jq -r '.modem.generic.bearers[0]' | cut -d/ -f6 | awk '{print $1}')
 }
 
 function findModem()
@@ -95,7 +103,7 @@ function connectBearer()
 
     state=$(mmcli -J -m $imodem | jq -r '.modem.generic.state')
     info "In connectBearer: Modem is in state \"${state}\""
-    ibearer=$(mmcli -m $imodem | grep -m 1 "Bearer   |                dbus path" | cut -d/ -f6 | awk '{print $1}')
+    ibearer=$(mmcli -m $imodem | grep -m 1 "Bearer   |                paths" | cut -d/ -f6 | awk '{print $1}')
     until [[ -n $ibearer ]]
     do
         info "In connectBearer: No bearer found for modem ID $imodem modem is in state \"${state}\""
@@ -123,9 +131,9 @@ function configureWwan()
 {
     info "Configuring WWAN interface: $WWAN_IFACE"
     barerget=$(mmcli -b $ibearer)
-    IPv4address=$(echo $barerget | cut -d ':' -f12 | awk '{print $1}')
-    IPv4prefixlen=$(echo $barerget | cut -d ':' -f13 | awk '{print $1}')
-    IPv4gatewayaddress=$(echo $barerget | cut -d ':' -f14 | awk '{print $1}')
+    IPv4address=$(echo $barerget | cut -d ':' -f13 | awk '{print $1}')
+    IPv4prefixlen=$(echo $barerget | cut -d ':' -f14 | awk '{print $1}')
+    IPv4gatewayaddress=$(echo $barerget | cut -d ':' -f15 | awk '{print $1}')
 
     #info "$(ip route del default dev $WWAN_IFACE)"
     ip link set dev $WWAN_IFACE down
