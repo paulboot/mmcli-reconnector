@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Dependancies install jq
+# Dependancies install jq libjq1 libonig5
 # dpkg -i jq_1.6-2.1_amd64.deb libjq1_1.6-2.1_amd64.deb libonig5_6.9.6-1.1_amd64.deb
 
 VERSION="0.1"
@@ -31,7 +31,7 @@ do
     i=0
     until [[ $i -eq 5 ]]
         do
-        imodem=$(mmcli -L |grep -m 1 "Modem" |cut -d/ -f6 | awk '{print $1}')
+        getimodem
         if [[ -z $imodem ]]; then
              warning "Existing modem not found please reinsert modem"
              findModem
@@ -77,9 +77,7 @@ do
         info "In main 3: initbearer ID: $iinitbearer bearer ID $ibearer status connected: $conbearer and modem in state  \"${statecon}\""
         time=$(datetime)
         conbearer=$(echo $barerget | cut -d ':' -f4 | awk '{print $1}')
-        address=$(echo $barerget | cut -d ':' -f13 | awk '{print $1}')
-        prefix=$(echo $barerget | cut -d ':' -f14 | awk '{print $1}')
-        gateway=$(echo $barerget | cut -d ':' -f15 | awk '{print $1}')
+        getIPsettings
 
         locationget=$(mmcli  -m $imodem --location-get)
         mmc=$(echo $locationget | cut -d ':' -f2 | awk '{print $1}')
@@ -106,7 +104,7 @@ do
         pingloss=$(echo $pingerout | awk '{print $18}')
         pingduration=$(echo $pingerout | awk '{print $22}')
 
-        echo "$time;$imodem;$tmodem;$statecon;$mmc;$mnc;$tac;$cellid;$rssi;$rsrq;$rsrp;$sinr;$iinitbearer;$ibearer;$conbearer;$address;$prefix;$gateway;$pingmin;$pingavg;$pingmax;$pingmdev;$pingloss;$pingduration"
+        echo "$time;$imodem;$tmodem;$statecon;$mmc;$mnc;$tac;$cellid;$rssi;$rsrq;$rsrp;$sinr;$iinitbearer;$ibearer;$conbearer;${IPsettings[0]};${IPsettings[1]};${IPsettings[2]};$pingmin;$pingavg;$pingmax;$pingmdev;$pingloss;$pingduration"
     else
         error "In main 4: initbearer ID: $iinitbearer bearer ID: not defined or is: $ibearer"
     fi

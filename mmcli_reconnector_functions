@@ -1,3 +1,5 @@
+#!/bin/bash
+
 ## mmcli-cl functions
 ## -- for my Sierra Netgear AirCard 320U Modem DirectIP-manual connection
 ##
@@ -50,6 +52,16 @@ function getibearer()
     ibearer=$(mmcli -J -m $imodem | jq -r '.modem.generic.bearers[0]' | cut -d/ -f6 | awk '{print $1}')
 }
 
+function getimodem()
+{
+    imodem=$(mmcli -J -L | jq -r '."modem-list"[0]' | cut -d/ -f6)
+}
+
+function getIPsettings()
+{
+    IPsettings=($(mmcli -J -b 1 | jq -r '.bearer."ipv4-config".address + " " + .bearer."ipv4-config".prefix + " " + .bearer."ipv4-config".gateway'))
+}
+
 function findModem()
 {
     # Find first modem
@@ -57,7 +69,7 @@ function findModem()
     imodem=""
     until [[ -n $imodem ]]
     do
-        imodem=$(mmcli -L |grep -m 1 "Modem" |cut -d/ -f6 | awk '{print $1}')
+        getimodem
         [[ -z $imodem ]] && error "In findModem: No modem found sleep 1 second..." && sleep 5
     done
 
@@ -70,7 +82,7 @@ function findModem()
 function initModem()
 {
     #  Initialise modem
-    imodem=$(mmcli -L |grep -m 1 "Modem" |cut -d/ -f6 | awk '{print $1}')
+    getimodem
     info "Initialising modem with ID $imodem"
     state=$(mmcli -J -m $imodem | jq -r '.modem.generic.state')
     if [[ "$state" == "connected" || "$state" == "registered" ]]; then
@@ -94,7 +106,7 @@ function initModem()
 function connectBearer()
 {
     info "In connectBearer: first check if modem is inserted"
-    imodem=$(mmcli -L |grep -m 1 "Modem" |cut -d/ -f6 | awk '{print $1}')
+    getimodem
     if [[ -z $imodem ]]; then
          error "In connectBearer: No modem found please reinsert modem"
          findModem
@@ -103,24 +115,26 @@ function connectBearer()
 
     state=$(mmcli -J -m $imodem | jq -r '.modem.generic.state')
     info "In connectBearer: Modem is in state \"${state}\""
-    ibearer=$(mmcli -m $imodem | grep -m 1 "Bearer   |                paths" | cut -d/ -f6 | awk '{print $1}')
+    getibearer
     until [[ -n $ibearer ]]
     do
         info "In connectBearer: No bearer found for modem ID $imodem modem is in state \"${state}\""
         info "In connectBearer: Trying to do a simple-connect"
         info "$(mmcli -m $imodem --simple-connect='apn=internet.access.nl,ip-type=ipv4')"
-        ibearer=$(mmcli -m $imodem | grep -m 1 "Bearer   |                dbus path" | cut -d/ -f6 | awk '{print $1}')
+        getibearer
         [[ -z $ibearer ]] && info "In connectBearer: Still no bearer found sleep 1" && sleep 1
     done
 
     state=$(mmcli -J -m $imodem | jq -r '.modem.generic.state')
     info "In connectBearer: Found bearer ID $ibearer modem is in state \"${state}\""
+    getibearer
     barerget=$(mmcli -b $ibearer)
     conbearer=$(echo $barerget | cut -d ':' -f4 | awk '{print $1}')
     info "In connectBearer1: For bearer ID $ibearer is connected \"${conbearer}\""
     until [[ "$conbearer" == "yes" ]]
     do
         info "$(mmcli -m $imodem --simple-connect='apn=internet.access.nl,ip-type=ipv4')"
+        getibearer
         barerget=$(mmcli -b $ibearer)
         conbearer=$(echo $barerget | cut -d ':' -f4 | awk '{print $1}')
         info "In connectBearer2: For bearer ID $ibearer is connected \"${conbearer}\""
@@ -129,20 +143,18 @@ function connectBearer()
 
 function configureWwan()
 {
-    info "Configuring WWAN interface: $WWAN_IFACE"
-    barerget=$(mmcli -b $ibearer)
-    IPv4address=$(echo $barerget | cut -d ':' -f13 | awk '{print $1}')
-    IPv4prefixlen=$(echo $barerget | cut -d ':' -f14 | awk '{print $1}')
-    IPv4gatewayaddress=$(echo $barerget | cut -d ':' -f15 | awk '{print $1}')
+    info "Configuring WWAN interface: ${WWAN_IFACE}"
+    getibearer
+    getIPsettings
 
     #info "$(ip route del default dev $WWAN_IFACE)"
-    ip link set dev $WWAN_IFACE down
-    ip addr flush dev $WWAN_IFACE
+    ip link set dev ${WWAN_IFACE} down
+    ip addr flush dev ${WWAN_IFACE}
 
-    ip addr add $IPv4address/$IPv4prefixlen dev $WWAN_IFACE
-    ip link set dev $WWAN_IFACE arp off
-    ip link set dev $WWAN_IFACE mtu $MTU
-    ip link set dev $WWAN_IFACE up
-    ip route add default via $IPv4gatewayaddress dev $WWAN_IFACE metric 100
-    info "Done added IP address and default route on WWAN interface: $WWAN_IFACE"
+    ip addr add ${IPsettings[0]}/${IPsettings[1]} dev ${WWAN_IFACE}
+    ip link set dev ${WWAN_IFACE} arp off
+    ip link set dev ${WWAN_IFACE} mtu ${MTU}
+    ip link set dev ${WWAN_IFACE} up
+    ip route add default via ${IPsettings[2]} dev ${WWAN_IFACE} metric 100
+    info "Added IP address/prefix ${IPsettings[0]}/${IPsettings[1]} and destination ${IPsettings[2]} default route on WWAN interface: ${WWAN_IFACE}"
 }
