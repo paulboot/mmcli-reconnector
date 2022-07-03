@@ -20,7 +20,7 @@ wget http://ftp.de.debian.org/debian/pool/main/j/jq/jq_1.6-2.1_amd64.deb
 wget http://ftp.de.debian.org/debian/pool/main/j/jq/libjq1_1.6-2.1_amd64.deb
 wget http://ftp.de.debian.org/debian/pool/main/libo/libonig/libonig5_6.9.6-1.1_amd64.deb
 
-dpkg -i *.deb
+dpkg --auto-deconfigure -i *.deb
 
 echo "DONE"
 
