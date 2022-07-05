@@ -42,6 +42,20 @@ function repdot()
     return ${1//[\.]/,}
 }
 
+function initleds()
+{
+    modprobe ledtrig-netdev
+
+    #LED2 displays wwan0 activity
+    echo "netdev" > /sys/class/leds/apu3:green:led2/trigger
+    echo "wwan0" > /sys/class/leds/apu3:green:led2/device_name
+    echo "1" > /sys/class/leds/apu3:green:led2/tx
+    echo "1" > /sys/class/leds/apu3:green:led2/rx
+
+    #LED3 displays found ibearer
+    echo 0 > /sys/class/leds/apu3:green:led3/brightness
+}
+
 function getiinitbearer()
 {
     iinitbearer=$(mmcli -J -m $imodem | jq -r '.modem."3gpp".eps."initial-bearer"."dbus-path"' | cut -d/ -f6 | awk '{print $1}')
@@ -59,7 +73,7 @@ function getimodem()
 
 function getIPsettings()
 {
-    IPsettings=($(mmcli -J -b 1 | jq -r '.bearer."ipv4-config".address + " " + .bearer."ipv4-config".prefix + " " + .bearer."ipv4-config".gateway'))
+    IPsettings=($(mmcli -J -b $ibearer | jq -r '.bearer."ipv4-config".address + " " + .bearer."ipv4-config".prefix + " " + .bearer."ipv4-config".gateway'))
 }
 
 function findModem()
@@ -74,9 +88,10 @@ function findModem()
     done
 
     # Find name of modem
-    tmodem=$(mmcli -L |grep -m 1 "Modem" |cut -d/ -f6 | awk '{print $5 $6 $7}')
-    [[ -z $tmodem ]] && error "In findModem: No modem description found" && exit 1
-    info "Found first modem ID $imodem with description \"${tmodem}\""
+    model=$(mmcli -J -m $imodem | jq -r '.modem.generic.model')
+    revision=$(mmcli -J -m $imodem | jq -r '.modem.generic.revision')
+    [[ -z $model ]] && error "In findModem: No modem description found for mofrm ID $imodem" && exit 1
+    info "Found first modem ID $imodem with description \"${model}\""
 }
 
 function initModem()
@@ -105,6 +120,9 @@ function initModem()
 
 function connectBearer()
 {
+    #Disable LED3
+    echo 0 > /sys/class/leds/apu3:green:led3/brightness
+
     info "In connectBearer: first check if modem is inserted"
     getimodem
     if [[ -z $imodem ]]; then
@@ -139,6 +157,9 @@ function connectBearer()
         conbearer=$(echo $barerget | cut -d ':' -f4 | awk '{print $1}')
         info "In connectBearer2: For bearer ID $ibearer is connected \"${conbearer}\""
     done
+    info "In connectBearer3: For bearer ID $ibearer is connected \"${conbearer}\""
+    #Enable LED3
+    echo 1 > /sys/class/leds/apu3:green:led3/brightness
 }
 
 function configureWwan()

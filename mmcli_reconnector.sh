@@ -20,12 +20,13 @@ TMPLOG="/tmp/${NAME}_log_$$.txt"
 #Source functions
 . $INSTALLPATH/mmcli_reconnector_functions
 
+initleds
 findModem
 initModem
 connectBearer
 configureWwan
 
-echo "time;imodem;tmodem;statecon;mmc;mnc;tac;cellid;rssi;rsrq;rsrp;sinr;iinitbearer;ibearer;conbearer;address;prefix;gateway;pingmin;pingavg;pingmax;pingmdev;pingloss;pingduration"
+echo "time;imodem;model;revision;statecon;mmc;mnc;tac;cellid;rssi;rsrq;rsrp;sinr;iinitbearer;ibearer;conbearer;address;prefix;gateway;pingmin;pingavg;pingmax;pingmdev;pingloss;pingduration"
 while true
 do
     i=0
@@ -104,7 +105,7 @@ do
         pingloss=$(echo $pingerout | awk '{print $18}')
         pingduration=$(echo $pingerout | awk '{print $22}')
 
-        echo "$time;$imodem;$tmodem;$statecon;$mmc;$mnc;$tac;$cellid;$rssi;$rsrq;$rsrp;$sinr;$iinitbearer;$ibearer;$conbearer;${IPsettings[0]};${IPsettings[1]};${IPsettings[2]};$pingmin;$pingavg;$pingmax;$pingmdev;$pingloss;$pingduration"
+        echo "$time;$imodem;$model;$revision;$statecon;$mmc;$mnc;$tac;$cellid;$rssi;$rsrq;$rsrp;$sinr;$iinitbearer;$ibearer;$conbearer;${IPsettings[0]};${IPsettings[1]};${IPsettings[2]};$pingmin;$pingavg;$pingmax;$pingmdev;$pingloss;$pingduration"
     else
         error "In main 4: initbearer ID: $iinitbearer bearer ID: not defined or is: $ibearer"
     fi
