@@ -59,7 +59,7 @@ do
 
         i=$((i+1))
         debug "In main done itteration $i going to sleep for 1 second"
-        sleep 0.91
+        sleep 0.5
     done
 
     statecon=$(mmcli -J -m $imodem | jq -r '.modem.generic.state')

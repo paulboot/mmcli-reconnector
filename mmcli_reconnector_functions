@@ -151,7 +151,7 @@ function connectBearer()
     info "In connectBearer1: For bearer ID $ibearer is connected \"${conbearer}\""
     until [[ "$conbearer" == "yes" ]]
     do
-        info "$(mmcli -m $imodem --simple-connect='apn=internet.access.nl,ip-type=ipv4')"
+        info "$(mmcli -m $imodem --simple-connect='apn=internet.access.nl,ip-type=ipv4v6')"
         getibearer
         barerget=$(mmcli -b $ibearer)
         conbearer=$(echo $barerget | cut -d ':' -f4 | awk '{print $1}')
