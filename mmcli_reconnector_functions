@@ -63,7 +63,8 @@ function getiinitbearer()
 
 function getibearer()
 {
-    ibearer=$(mmcli -J -m $imodem | jq -r '.modem.generic.bearers[0]' | cut -d/ -f6 | awk '{print $1}')
+    ibearer=$(mmcli -J -m $imodem | jq -r '.modem.generic.bearers[0]' | cut -d/ -f6)
+    [[ -z $ibearer ]] && error "In getibearer: No bearer found for modem ID: $imodem"
 }
 
 function getimodem()
@@ -84,7 +85,7 @@ function findModem()
     until [[ -n $imodem ]]
     do
         getimodem
-        [[ -z $imodem ]] && error "In findModem: No modem found sleep 1 second..." && sleep 5
+        [[ -z $imodem ]] && error "In findModem: No modem found sleep 1 second..." && sleep 1
     done
 
     # Find name of modem
@@ -167,6 +168,13 @@ function configureWwan()
     info "Configuring WWAN interface: ${WWAN_IFACE}"
     getibearer
     getIPsettings
+
+    #delete default routes if exist
+    if [[ $(ip route show default) ]]
+    then
+        info "Deleting default routes $(ip route show default)"
+        ip route del default
+    fi
 
     #info "$(ip route del default dev $WWAN_IFACE)"
     ip link set dev ${WWAN_IFACE} down
