@@ -134,31 +134,29 @@ function connectBearer()
 
     state=$(mmcli -J -m $imodem | jq -r '.modem.generic.state')
     info "In connectBearer: Modem is in state \"${state}\""
-    getibearer
-    until [[ -n $ibearer ]]
-    do
-        info "In connectBearer: No bearer found for modem ID $imodem modem is in state \"${state}\""
+
+    if [[ "$state" == "registered" ]]
+    then
+        info "In connectBearer: No bearer for modem ID $imodem modem because in state \"${state}\""
         info "In connectBearer: Trying to do a simple-connect"
         info "$(mmcli -m $imodem --simple-connect='apn=internet.access.nl,ip-type=ipv4')"
-        getibearer
-        [[ -z $ibearer ]] && info "In connectBearer: Still no bearer found sleep 1" && sleep 1
-    done
+    fi
 
+    getibearer
+    [[ -z $ibearer ]] && error "In connectBearer: Still no bearer found exit Network or APN config error?" && exit
     state=$(mmcli -J -m $imodem | jq -r '.modem.generic.state')
     info "In connectBearer: Found bearer ID $ibearer modem is in state \"${state}\""
-    getibearer
     barerget=$(mmcli -b $ibearer)
     conbearer=$(echo $barerget | cut -d ':' -f4 | awk '{print $1}')
-    info "In connectBearer1: For bearer ID $ibearer is connected \"${conbearer}\""
-    until [[ "$conbearer" == "yes" ]]
-    do
-        info "$(mmcli -m $imodem --simple-connect='apn=internet.access.nl,ip-type=ipv4v6')"
+    info "In connectBearer1: For bearer ID $ibearer is status connected: \"${conbearer}\""
+    if [[ "$conbearer" == "no" ]]
+    then
+        info "$(mmcli -b $ibearer -c)"
         getibearer
         barerget=$(mmcli -b $ibearer)
         conbearer=$(echo $barerget | cut -d ':' -f4 | awk '{print $1}')
-        info "In connectBearer2: For bearer ID $ibearer is connected \"${conbearer}\""
-    done
-    info "In connectBearer3: For bearer ID $ibearer is connected \"${conbearer}\""
+    fi
+    info "In connectBearer2: For bearer ID $ibearer is status connected: \"${conbearer}\""
     #Enable LED3
     echo 1 > /sys/class/leds/apu3:green:led3/brightness
 }
@@ -186,4 +184,20 @@ function configureWwan()
     ip link set dev ${WWAN_IFACE} up
     ip route add default via ${IPsettings[2]} dev ${WWAN_IFACE} metric 100
     info "Added IP address/prefix ${IPsettings[0]}/${IPsettings[1]} and destination ${IPsettings[2]} default route on WWAN interface: ${WWAN_IFACE}"
+}
+
+function initnft()
+{
+    #test if rules exits
+    #nft list table inet nat > /dev/null 2>&1 ;echo $?
+    info "Adding firewall rules"
+    nft add table inet nat
+    nft add chain inet nat postrouting '{ type nat hook postrouting priority 100 ; }'
+    nft add rule inet nat postrouting oifname wwan0 masquerade
+
+    nft add table inet filter
+    nft add chain inet filter forward '{ type filter hook forward priority 0; policy drop; }'
+    nft add rule inet filter forward ct state related,established accept
+    nft add rule inet filter forward iifname wlan0 oifname wwan0 accept
+    nft add rule inet filter forward iifname eth0 oifname wwan0 accept
 }

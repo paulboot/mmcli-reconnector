@@ -21,6 +21,7 @@ TMPLOG="/tmp/${NAME}_log_$$.txt"
 . $INSTALLPATH/mmcli_reconnector_functions
 
 initleds
+initnft
 findModem
 initModem
 connectBearer
@@ -39,7 +40,7 @@ do
              initModem
         fi
 
-        getiinitbearer
+        #getiinitbearer
         getibearer
         statecon=$(mmcli -J -m $imodem | jq -r '.modem.generic.state')
         if [[ -z $ibearer ]]; then
@@ -59,11 +60,11 @@ do
 
         i=$((i+1))
         debug "In main done itteration $i going to sleep for 1 second"
-        sleep 0.5
+        sleep 5
     done
 
     statecon=$(mmcli -J -m $imodem | jq -r '.modem.generic.state')
-    getiinitbearer
+    #getiinitbearer
     getibearer
     if [[ -n $ibearer ]]; then
         barerget=$(mmcli -b $ibearer)
@@ -84,7 +85,7 @@ do
         mmc=$(echo $locationget | cut -d ':' -f2 | awk '{print $1}')
         mnc=$(echo $locationget | cut -d ':' -f3 | awk '{print $1}')
         tac=$(echo $locationget | cut -d ':' -f5 | awk '{print $1}')
-        cellid=$(echo $locationget | cut -d ':' -f6 | awk '{print $1}')
+        cellid=$((16#$(echo $locationget | cut -d ':' -f6 | awk '{print $1}')))
 
         signalinput=$(mmcli -m $imodem --signal-get)
         rssi=$(echo $signalinput | cut -d ':' -f3 | awk '{print $1}')
