@@ -139,7 +139,7 @@ function connectBearer()
     then
         info "In connectBearer: No bearer for modem ID $imodem modem because in state \"${state}\""
         info "In connectBearer: Trying to do a simple-connect"
-        info "$(mmcli -m $imodem --simple-connect='apn=internet.access.nl,ip-type=ipv4')"
+        info "$(mmcli -m $imodem --simple-connect='apn=internet.access.nl,ip-type=ipv4v6,allow-roaming=1')"
     fi
 
     getibearer
